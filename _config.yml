@@ -28,7 +28,7 @@ url: "https://abdale.github.io" # the base hostname & protocol for your site, e.
 github_username:  abdale
 
 # Build settings
-theme: architect
+theme: jekyll-theme-architect
 plugins:
   - jekyll-feed
 
