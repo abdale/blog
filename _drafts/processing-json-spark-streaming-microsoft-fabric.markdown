@@ -4,89 +4,23 @@ title:  "Processing JSON with Spark Streaming in Microsoft Fabric"
 date:   2025-02-07 19:18:46 -0500
 categories: update
 ---
-Spark Structured Streaming is a scalable and fault-tolerant stream processing engine built on the Spark SQL engine, which allows users to process real-time data streams using the same high-level APIs as batch processing. When working with streaming ingestion of complex JSON datasets, using notebooks in Microsoft Fabric allows for leveraging the rich Python ecosystem and also uses the power of Apache Spark to efficiently handle massive JSON datasets in a distributed compute environment.
+[Spark Structured Streaming](https://spark.apache.org/streaming/) is a scalable and fault-tolerant stream processing engine built on the Spark SQL engine, which allows users to process real-time data streams using the same high-level APIs as batch processing. When working with streaming ingestion of complex JSON datasets, using notebooks in Microsoft Fabric allows for leveraging the rich Python ecosystem and also uses the power of Apache Spark to efficiently handle massive JSON datasets in a distributed compute environment.
 
-## Working with JSON
+In this blog, we will walk through a scenario to harness Fabric Spark for processing a stream of nested JSON which will then be loaded as a Delta parquet table in the Fabric Lakehouse.
 
-JSON can be processed very efficiently with **Spark** Streaming but the variability in tje JSON's structure can introduce significant challenges that impact performance and the overall viability of streaming ETL flows. Not all JSON datasets are created equal though, a JSON dataset can be as simple as containing the columns as key-value pairs inside curly brackets wrapped around an array or as complex as a nested array of objects representing columns.
+### Working with nested JSON
 
-The flexibility of JSON, allowing for nested structures and varying schemas, can complicate processing. Nested arrays and objects require additional steps like flattening and denormalization to be analyzed effectively. This can introduce computational overhead and impact performance. In streaming ETL flows, the variability in JSON structure can affect the consistency and speed of data processing. Complex JSON structures may require more extensive parsing and transformation, which can slow down the ETL pipeline. Also, unlike tabular formats, JSON does not enforce a fixed schema. This flexibility can lead to challenges in schema inference and validation, making it harder to ensure data quality and consistency.
+<div style="text-align: center;">
+  <img src="\blog\assets\json.png" alt="Alt text" width="200">
+</div>
 
-Before we dive into our scenario, let's understand JSON complexity further with a few examples.
+JSON can be processed very efficiently with Spark Streaming but the variability in the JSON's structure can introduce significant challenges that impact performance and the overall viability of streaming ETL flows. The flexibility of JSON, allowing for nested structures and varying schemas, can complicate processing. Nested arrays and objects require additional steps like flattening and denormalization to be analyzed effectively. This can introduce computational overhead and impact performance which can slow down the ETL pipeline. Also, unlike tabular formats, JSON does not enforce a fixed schema. This flexibility can lead to challenges in schema inference and validation, making it harder to ensure data quality and consistency.
 
-Simple **JSON object with a flat structure** where each record is a JSON object with key-value pairs representing columns:
+A simple JSON object with a **flat structure** where each record is a JSON object with key-value pairs representing columns poses less of a challenge when processing given its straight-forward structrue. A JSON containing an **array of objects** with columns represented as objects inside an array, for example, poses more of a challenge in terms of parsing it.
 
-{% highlight ruby %}
-[
-  {"orderId": "12345", "customerName": "Michael", "totalAmount": 150.75},
-  {"orderId": "12346", "customerName": "Sarah", "totalAmount": 200.00}
-]
-{% endhighlight %}
+The more nesting inside a JSON dataset, the more complexity it introduces which can lead to more latency in a real-time ingestion flow. No JSON is too complex to handle though provided that you utilize the rich set of JSON functions in Spark SQL for parsing the JSON efficiently and accurately.
 
-**Nested objects** with columns nested within other objects to represent hierarchical data:
-
-{% highlight ruby %}
-[
-  {
-    "orderId": "12345",
-    "customerName": "Michael",
-    "shippingAddress": {
-      "street": "123 Maple St",
-      "city": "Toronto",
-      "postalCode": "M5H 2N2"
-    }
-  },
-  {
-    "orderId": "12346",
-    "customerName": "Sarah",
-    "shippingAddress": {
-      "street": "456 Oak St",
-      "city": "Vancouver",
-      "postalCode": "V5K 0A1"
-    }
-  }
-]
-{% endhighlight %}
-
-**Array of objects** with columns represented as objects inside an array:
-
-{% highlight ruby %}
-[
-  {
-    "orderId": "12345",
-    "customerName": "Michael",
-    "items": [
-      {"itemName": "Laptop", "quantity": 1, "price": 1000.00},
-      {"itemName": "Mouse", "quantity": 2, "price": 25.00}
-    ]
-  },
-  {
-    "orderId": "12346",
-    "customerName": "Sarah",
-    "items": [
-      {"itemName": "Keyboard", "quantity": 1, "price": 50.00}
-    ]
-  }
-]
-{% endhighlight %}
-
-The more nesting inside a JSON dataset, the more complexity it introduces, and introduces more latency in a real-time or near real-time ingestion flow. No JSON is too complex to handle though provided that you utilize the rich set of JSON functions in Spark SQL for parsing the JSON efficiently and accurately.
-
-For our scenario, we will work with a JSON dataset in which the majority of columns are represented in an **array of objects**.
-
-## Scenario
-
-In this scenario, you will learn how to ingest and parse streaming JSON from Azure Event Hubs into a Microsoft Fabric Lakehouse using the power of Spark Structured Streaming.
-
-Follow the steps below to implement this scenario:
-
-1. Analyze the [sample JSON payload](#sample-json-payload)
-1. [Set up a stream with Azure Event Hubs](#set-up-a-stream-with-azure-event-hubs)
-1. [Ingest into the Fabric Lakehouse with Spark Structured Streaming]()
-
-### Sample JSON payload
-
-Let's start with a JSON which contains most of its columns as an array of objects.
+For our scenario, we will work with a sample JSON dataset in which the majority of columns are represented in an array of objects:
 
 {% highlight ruby %}
 [
@@ -107,74 +41,51 @@ Let's start with a JSON which contains most of its columns as an array of object
 ]
 {% endhighlight %}
 
-## Set up a stream with Azure Event Hubs
+## Scenario
+
+![Architecture](\blog\assets\Architecture-JSON-Spark-Streaming-Fabric.jpg)
+
+In this scenario, you will learn how to ingest and parse streaming JSON from Azure Event Hubs into a Microsoft Fabric Lakehouse using the power of Spark Structured Streaming.
+
+Follow the steps below to implement this scenario:
+
+1. [Set up a stream with Azure Event Hubs](#set-up-a-stream-with-azure-event-hubs)
+2. [Ingest into the Fabric Lakehouse with Spark Structured Streaming](#ingest-into-the-fabric-lakehouse-with-spark-structured-streaming)
+
+### Set up a stream with Azure Event Hubs
 
 Before we parse our JSON, we need to ingest it. In order to do that, we will setup Azure Event Hubs and begin receiving streaming JSON using the [Events Hubs Data Explorer](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-data-explorer) which offers a great way for debugging and reviewing data in Event Hubs with minimal effort. Alternatively, use the python script below to send events from your local machine.
 
-### Send events using Event Hubs Data Explorer
+#### Send events using Event Hubs Data Explorer
 
 1. [Create an Azure Event Hubs namespace and event hub](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-create) in Azure.
-1. Use the [Event Hubs Data Explorer](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-data-explorer#use-the-event-hubs-data-explorer) to [send events with a custom payload](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-data-explorer#sending-custom-payload) by selecting the `Custom payload` dataset and selecting `JSON` as the `Content-Type`.
-1. Enter the sample JSON (above) as the payload and check the **Repeat send** box, and specify the **Repeat send count** and the interval between each payload. This will ensure you have a steady stream of events to work with.
+2. Use the [Event Hubs Data Explorer to send events.](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-data-explorer#use-the-event-hubs-data-explorer)
+   ![Event Hubs Data Explorer](\blog\assets\eventhubs-data-explorer-send-events.png)
+3. To send events with a custom payload, select the `Custom payload` dataset and select `JSON` as the `Content-Type`. Enter the sample JSON (above) as the payload and check the **Repeat send** box, and specify the **Repeat send count** and the interval between each payload. This will ensure you have a steady stream of events to work with.
+   ![Send events from Data Explorer](\blog\assets\eventhubs-send-events-custom-payload.png)
 
-### Send events from local machine
+#### Send events from local machine
 
-{% highlight ruby %}
-import time
-import json
-from azure.eventhub import EventHubProducerClient, EventData
+Alternatively, instead of using Azure Event Hubs Data Explorer to simulate a stream, you can send send events directly from your local machine by using a script.
 
-# Replace with your EventHub connection string and name
-CONNECTION_STR = 'Endpoint=sb://<eventhub_namespace>.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=<shared_access_key>'
-EVENTHUB_NAME = 'your_eventhub_name'
+1. Download `send_json.py` from the [GitHub repository](https://github.com/abdale/send-json-to-eventhubs).
+2. Download the sample JSON `sample.json`.
+3. Replace the **connection string**, **event hub name** and **json file path** in `send_json.py` before running it.
+4. Modify the `max_sends` and `time.sleep(1)` (currently set to 1s) in `send_json.py` as desired.
+5. Run `send_json.py` locally to send events to an event hub. Make sure you have [Python installed](https://www.python.org/downloads/) on your machine beforehand.
 
-def send_json_to_eventhub(file_path):
-    try:
-        producer = EventHubProducerClient.from_connection_string(conn_str=CONNECTION_STR, eventhub_name=EVENTHUB_NAME)
-        with open(file_path, 'r') as file:
-            json_data = json.load(file)
-            event_data_batch = producer.create_batch()
-            event_data_batch.add(EventData(json.dumps(json_data)))
-            producer.send_batch(event_data_batch)
-        producer.close()
-        print("Data sent to EventHub successfully.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+### Ingest into the Fabric Lakehouse with Spark Structured Streaming
 
-if __name__ == "__main__":
-    json_file_path = 'your_json_file_path'
-    max_sends = 500  # Set the number of sends before termination
-    send_count = 0
-
-    while send_count < max_sends:
-        send_json_to_eventhub(json_file_path)
-        send_count += 1
-        time.sleep(1)  # Wait for 1 second
-
-    print(f"Terminated after {max_sends} sends.")
-{% endhighlight %}
-
-1. Copy the code snippet above in a file called `send.py`.
-1. Copy the sample JSON in a file called `sample.json`.
-1. Replace the connection string, event hub name and json file path in the script before running it.
-1. Modify the `max_sends` and `time.sleep(1)` (currently set to 1s) in the script as desired.  
-1. Run `send.py` locally to send events to an event hub. Make sure you have [Python installed](https://www.python.org/downloads/) on your machine.
-
-## Ingest into the Fabric Lakehouse with Spark Structured Streaming
-
-### 1 - Setup
-
-In a Fabric PySpark notebook, setup the connection string containing the Event Hubs namespace and shared access key, and encrypt it.
+1 - After setting up our Azure Event Hubs streaming, we are ready to ingest it into the Fabric Lakehouse. In a **Fabric PySpark notebook**, setup the connection string containing the Event Hubs namespace and shared access key.
 
 {% highlight ruby %}
 connectionString = "Endpoint=sb://<EVENT_HUB_NAMESPACE>.servicebus.windows.net/;SharedAccessKeyName=<SHARED_ACCESS_KEY_NAME>;SharedAccessKey=<SHARED_ACCESS_KEY>;EntityPath=<EVENT_HUB_NAME>"
-
 ehConf['eventhubs.connectionString'] = spark._jvm.org.apache.spark.eventhubs.EventHubsUtils.encrypt(connectionString)
 {% endhighlight %}
 
-> Note about managing secrets in Azure Key Vault
+> Note: As a security best practice, it is recommended to keep your shared access key in Azure Key Vault. Use [Credentials utilities](https://learn.microsoft.com/en-ca/fabric/data-engineering/notebook-utilities#credentials-utilities) to access Azure Key Vault secrets in a Fabric notebook.
 
-### 2 - Import the necassary libraries
+2 - Next, import the necassary libraries required to perform transformations on your dataset:
 
 {% highlight ruby %}
 import pyspark.sql.functions as f
@@ -182,32 +93,7 @@ from pyspark.sql.functions import col, explode, expr, first
 from pyspark.sql.types import *
 {% endhighlight %}
 
-### 3 - Define the JSON schema
-
-{% highlight ruby %}
-# Define the schema for the columns array
-columns_schema = ArrayType(StructType([
-    StructField("operation", StringType(), True),
-    StructField("make", StringType(), True),
-    StructField("model", StringType(), True),
-    StructField("vehicleType", IntegerType(), True),
-    StructField("state", StringType(), True),
-    StructField("tollAmount", IntegerType(), True),
-    StructField("tag", LongType(), True),
-    StructField("licensePlate", StringType(), True)
-]))
-
-# Define the schema for the main JSON structure
-schema = StructType([
-    StructField("columns", columns_schema, True),
-    StructField("entryTime", TimestampType(), True),
-    StructField("eventProcessedUtcTime", TimestampType(), True)
-])
-{% endhighlight %}
-
-This is based on our sample JSON above. Since the columns in our JSON payload are structured as an array of objects, the above schema definition for the columns is an `ArrayType`. You may have a different JSON structure. It is important to properly define the schema to avoid complications.
-
-### 4 - Read stream from Event Hubs
+3   Read stream from Event Hubs in a DataFrame:
 
 {% highlight ruby %}
 df = spark \
@@ -215,11 +101,15 @@ df = spark \
   .format("eventhubs") \
   .options(**ehConf) \
   .load()
+{% endhighlight %}
 
+5 - Select and cast the body column from the DataFrame as a string to standardize the downstream processing:
+
+{% highlight ruby %}
 raw_data = df.selectExpr("CAST(body AS STRING) as message")
 {% endhighlight %}
 
-### 5 - Process the JSON
+6 - Process the JSON from the DataFrame, add a unique ID, structure the data, and write it to a Delta table:
 
 {% highlight ruby %}
 def process_json(df, epoch_id):
@@ -250,20 +140,9 @@ def process_json(df, epoch_id):
         final_df.write.format("delta").mode("append").saveAsTable("events")
 {% endhighlight %}
 
-Process each batch of data, flatten the JSON structure, cast all columns to strings, and write the data to a Delta table.
+This function processes incoming JSON data with an array structure, flattening and normalizing it into a tabular format. It addresses common issues like null values and varying data types to ensure data integrity for further processing. The function avoids the need to define a schema beforehand, sidestepping schema mismatches often encountered with the `from_json` function, for example. However, it uses the `collect()` method, which centralizes data on the driver node, which could lead to scalability challenges.
 
-Steps:
-
-- Collect Messages: Collect messages from the DataFrame.
-- Parse JSON: Parse the JSON data.
-- Add Unique ID: Add a unique ID column using uuid.
-- Explode JSON: Explode the "columns" array.
-- Select Columns: Select the necessary columns dynamically.
-- Aggregate Columns: Aggregate the columns to combine fields into a single row.
-- Cast to String: Cast all columns to strings.
-- Write to Delta Table: Write the processed data to a Delta table named events9.
-
-### 6 - Start streaming
+6 - Start streaming query to process incoming data in batches using the `process_json` function with checkpoints for fault tolerance:
 
 {% highlight ruby %}
 query = raw_data \
@@ -276,3 +155,6 @@ query = raw_data \
 # Await termination
 query.awaitTermination()
 {% endhighlight %}
+
+
+> **Note**: You can find the Notebook to execute the steps above in Microsoft Fabric [here](/assets/process-json-into-fabric-lakehouse.ipynb). Simply download and import it into your Fabric workspace to get started.
