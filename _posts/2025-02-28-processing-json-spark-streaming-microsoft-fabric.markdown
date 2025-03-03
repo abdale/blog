@@ -11,7 +11,7 @@ In this blog, we will walk through a scenario to harness Fabric Spark for proces
 ### Working with nested JSON
 
 <div style="text-align: center;">
-  <img src="\blog\assets\json.png" alt="Alt text" width="200">
+  <img src="\assets\json.png" alt="Alt text" width="200">
 </div>
 
 JSON can be processed very efficiently with Spark Streaming but the variability in the JSON's structure can introduce significant challenges that impact performance and the overall viability of streaming ETL flows. The flexibility of JSON, allowing for nested structures and varying schemas, can complicate processing. Nested arrays and objects require additional steps like flattening and denormalization to be analyzed effectively. This can introduce computational overhead and impact performance which can slow down the ETL pipeline. Also, unlike tabular formats, JSON does not enforce a fixed schema. This flexibility can lead to challenges in schema inference and validation, making it harder to ensure data quality and consistency.
@@ -43,7 +43,7 @@ For our scenario, we will work with a sample JSON dataset in which the majority 
 
 ## Scenario
 
-![Architecture](\blog\assets\Architecture-JSON-Spark-Streaming-Fabric.jpg)
+![Architecture](\assets\Architecture-JSON-Spark-Streaming-Fabric.jpg)
 
 In this scenario, you will learn how to ingest and parse streaming JSON from Azure Event Hubs into a Microsoft Fabric Lakehouse using the power of Spark Structured Streaming.
 
@@ -60,9 +60,9 @@ Before we parse our JSON, we need to ingest it. In order to do that, we will set
 
 1. [Create an Azure Event Hubs namespace and event hub](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-create) in Azure.
 2. Use the [Event Hubs Data Explorer to send events.](https://learn.microsoft.com/en-us/azure/event-hubs/event-hubs-data-explorer#use-the-event-hubs-data-explorer)
-   ![Event Hubs Data Explorer](\blog\assets\eventhubs-data-explorer-send-events.png)
+   ![Event Hubs Data Explorer](\assets\eventhubs-data-explorer-send-events.png)
 3. To send events with a custom payload, select the `Custom payload` dataset and select `JSON` as the `Content-Type`. Enter the sample JSON (above) as the payload and check the **Repeat send** box, and specify the **Repeat send count** and the interval between each payload. This will ensure you have a steady stream of events to work with.
-   ![Send events from Data Explorer](\blog\assets\eventhubs-send-events-custom-payload.png)
+   ![Send events from Data Explorer](\assets\eventhubs-send-events-custom-payload.png)
 
 #### Send events from local machine
 
