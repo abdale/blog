@@ -2,7 +2,8 @@
 layout: post
 title:  "Processing JSON with Spark Streaming in Microsoft Fabric"
 date:   2025-02-07 19:18:46 -0500
-categories: update
+categories: tutorials 
+tags: fabric spark-streaming
 ---
 [Spark Structured Streaming](https://spark.apache.org/streaming/) is a scalable and fault-tolerant stream processing engine built on the Spark SQL engine, which allows users to process real-time data streams using the same high-level APIs as batch processing. When working with streaming ingestion of complex JSON datasets, using notebooks in Microsoft Fabric allows for leveraging the rich Python ecosystem and also uses the power of Apache Spark to efficiently handle massive JSON datasets in a distributed compute environment.
 
