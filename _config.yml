@@ -36,7 +36,6 @@ author:
   url:            https://hamood.net
 
 # Build settings
-theme: jekyll-theme-hydeout
 remote_theme: fongandrew/hydeout
 
 paginate:         5
