@@ -4,10 +4,16 @@ title: About
 sidebar_link: true
 ---
 
-I am a Cloud Solution Architect @ Microsoft for Data, Analytics and AI. I work with our customers to help them build and deploy Data & AI solutions. I'm passionate about data engineering, data science, and machine learning. I'm also a big fan of open-source software.
+Welcome to *hamood's data dispatch*! Here, you'll find insights, tutorials, tips, and resources on all things Data and AI.
 
-<p class="message">
-  Welcome to my blog! Here, you'll find a wealth of insights, tutorials, tips, and resources on data and AI. More importantly, I'll be sharing my thoughts on the latest happenings in these fields and beyond. Stay tuned!
-</p>
+<img src="/assets/me.jpg" alt="description" width="200">
 
-[LinkedIn](https://www.linkedin.com/in/hamood-ca)
+Presently, I am a **Senior Cloud Solution Architect @ Microsoft** for Data, Analytics and AI. I work with our customers to help them build and deploy Data & AI solutions. I'm passionate about data engineering, data science, and machine learning. I'm also a big fan of open-source software.
+
+Connect with me:
+
+- [LinkedIn](https://www.linkedin.com/in/hamood-ca)
+- [GitHub](https://www.github.com/abdale)
+- [Contact](https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAAN__rP_peVUMVpROTJJR1BPU1gwUlROOTAyMlY3MUw5TS4u)
+
+-- Hamood Aleem
