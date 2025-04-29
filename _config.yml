@@ -1,6 +1,9 @@
-title: My New Site
-description: A fresh start with Minima 3
-author: Your Name
+title: Hamood's Data Dispatch
+description: Hamood.net
+author: Hamood Aleem
+
+url: "https://hamood.net"
+baseurl: ""
 
 remote_theme: jekyll/minima@1e8a445
 
