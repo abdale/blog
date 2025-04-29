@@ -1,7 +1,7 @@
 ---
 layout: page
 title: About
-sidebar_link: true
+permalink: /about/
 ---
 
 Welcome to *hamood's data dispatch*! Here, you'll find insights, tutorials, tips, and resources on all things Data and AI.
