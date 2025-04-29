@@ -1,6 +1,4 @@
 ---
 layout: home
-title: Welcome
+title: Blog
 ---
-
-This is my new Jekyll site using the Minima theme.
